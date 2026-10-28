@@ -13,6 +13,7 @@ const movieSchema = new mongoose.Schema(
     status: { type: String, enum: STATUSES, default: 'To Watch' },
     rating: { type: Number, min: 1, max: 10, default: null },
     watchedDate: { type: Date, default: null },
+    posterUrl: { type: String, default: '' },
   },
   { timestamps: true }
 );

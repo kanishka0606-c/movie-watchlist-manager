@@ -36,6 +36,10 @@ function checkFields(b, isCreate) {
     errors.push('Priority must be a whole number between 1 and 5');
   else data.priority = priority;
 
+    if (typeof b.posterUrl === 'string') {
+    data.posterUrl = /^https?:\/\//i.test(b.posterUrl) ? b.posterUrl.slice(0, 500) : '';
+  }
+
   if (isCreate) {
     const year = Number(b.releaseYear);
     const thisYear = new Date().getFullYear();
