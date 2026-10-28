@@ -1,4 +1,6 @@
-# React + Vite
+# ReelQueue - Movie Watchlist Manager
+
+- Landing page, light/dark theme, poster lookup for movie cards
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
