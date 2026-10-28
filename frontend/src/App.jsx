@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
 import { GENRES, STATUSES } from './constants';
+import Landing from './components/Landing';
 import MovieForm from './components/MovieForm';
 import MovieCard from './components/MovieCard';
 import StatsPanel from './components/StatsPanel';
 
+const getTheme = () => {
+  try { return localStorage.getItem('rq-theme') || 'dark'; } catch { return 'dark'; }
+};
+
 export default function App() {
+  const [started, setStarted] = useState(false);
+  const [theme, setTheme] = useState(getTheme);
   const [movies, setMovies] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -17,6 +24,12 @@ export default function App() {
   const [form, setForm] = useState({ open: false, movie: null });
   const [notice, setNotice] = useState(null);
   const [nextPick, setNextPick] = useState(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('rq-theme', theme); } catch { /* storage unavailable */ }
+  }, [theme]);
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   const flash = useCallback((type, text) => {
     setNotice({ type, text });
@@ -46,7 +59,6 @@ export default function App() {
   useEffect(() => { loadMovies(); }, [loadMovies]);
   useEffect(() => { loadStats(); }, [loadStats]);
 
-  // small delay so we don't hit the API on every keystroke
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchText); setPage(1); }, 400);
     return () => clearTimeout(t);
@@ -82,13 +94,20 @@ export default function App() {
     }
   };
 
+  if (!started) return <Landing onStart={() => setStarted(true)} theme={theme} onToggle={toggleTheme} />;
+
   return (
     <div className="app">
       <header className="top">
-        <h1>🎬 Movie Watchlist</h1>
+        <button className="brand" onClick={() => setStarted(false)}>
+          Reel<span>Queue</span>
+        </button>
         <div className="top-actions">
-          <button className="btn ghost" onClick={askNext}>What should I watch next?</button>
+          <button className="btn ghost" onClick={askNext}>✨ What should I watch next?</button>
           <button className="btn primary" onClick={() => setForm({ open: true, movie: null })}>+ Add movie</button>
+          <button className="theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
       </header>
 
@@ -97,7 +116,7 @@ export default function App() {
       {nextPick && (
         <div className="next-pick">
           <div>
-            <strong>Watch next:</strong> {nextPick.title} ({nextPick.releaseYear}) · {nextPick.genre} ·{' '}
+            <strong>🍿 Watch next:</strong> {nextPick.title} ({nextPick.releaseYear}) · {nextPick.genre} ·{' '}
             {nextPick.runtime} min · priority {nextPick.priority}
           </div>
           <button className="btn ghost small" onClick={() => setNextPick(null)}>Dismiss</button>
@@ -108,7 +127,7 @@ export default function App() {
 
       <section className="filters">
         <input
-          placeholder="Search by title..."
+          placeholder="🔎 Search by title..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
@@ -123,12 +142,13 @@ export default function App() {
       </section>
 
       {movies.length === 0 ? (
-        <p className="empty">No movies found. Try adding one or changing the filters.</p>
+        <p className="empty">🎞️ No movies found. Add one or change the filters.</p>
       ) : (
         <section className="grid">
-          {movies.map((m) => (
+          {movies.map((m, i) => (
             <MovieCard
               key={m._id}
+              index={i}
               movie={m}
               onEdit={(movie) => setForm({ open: true, movie })}
               onStatus={(movie, s, rating) =>
@@ -142,9 +162,9 @@ export default function App() {
       )}
 
       <nav className="pager">
-        <button className="btn ghost small" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</button>
+        <button className="btn ghost small" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Prev</button>
         <span>Page {page} of {totalPages}</span>
-        <button className="btn ghost small" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button>
+        <button className="btn ghost small" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next →</button>
       </nav>
 
       {form.open && (
