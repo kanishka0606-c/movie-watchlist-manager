@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { GENRES, PLATFORMS } from '../constants';
+import { searchMovies } from '../posters';
 
-const blank = { title: '', genre: GENRES[0], releaseYear: '', runtime: '', platform: PLATFORMS[0], priority: 3 };
+const blank = {
+  title: '', genre: GENRES[0], releaseYear: '', runtime: '', platform: PLATFORMS[0], priority: 3, posterUrl: '',
+};
 
 export default function MovieForm({ movie, onSave, onClose }) {
   const editing = Boolean(movie);
@@ -15,15 +18,42 @@ export default function MovieForm({ movie, onSave, onClose }) {
           runtime: movie.runtime,
           platform: movie.platform,
           priority: movie.priority,
+          posterUrl: movie.posterUrl || '',
         }
       : blank
   );
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [found, setFound] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [searchMsg, setSearchMsg] = useState('');
 
   const set = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  const findMovie = async () => {
+    if (!form.title.trim()) return setSearchMsg('Type a title first');
+    setSearching(true);
+    setSearchMsg('');
+    try {
+      const list = await searchMovies(form.title.trim());
+      setFound(list);
+      if (list.length === 0) setSearchMsg('No matches. You can still save without a poster.');
+    } catch {
+      setFound(null);
+      setSearchMsg('Could not reach the poster service. You can still save without a poster.');
+    }
+    setSearching(false);
+  };
+
+    const pickResult = (r) => {
+    setForm((prev) =>
+      editing
+        ? { ...prev, posterUrl: r.poster }
+        : { ...prev, releaseYear: prev.releaseYear || r.year, posterUrl: r.poster }
+    );
+    setFound(null);
+  };
   const validate = () => {
     const e = {};
     if (!form.title.trim()) e.title = 'Title is required';
@@ -39,9 +69,9 @@ export default function MovieForm({ movie, onSave, onClose }) {
   const submit = async (ev) => {
     ev.preventDefault();
     setServerError('');
-    const found = validate();
-    setErrors(found);
-    if (Object.keys(found).length) return;
+    const found2 = validate();
+    setErrors(found2);
+    if (Object.keys(found2).length) return;
     setBusy(true);
     try {
       await onSave({
@@ -68,6 +98,34 @@ export default function MovieForm({ movie, onSave, onClose }) {
           <input name="title" value={form.title} onChange={set} />
           {errors.title && <small>{errors.title}</small>}
         </label>
+
+        <div>
+          <button type="button" className="btn ghost small" onClick={findMovie} disabled={searching}>
+            {searching ? 'Searching...' : '🔍 Find movie & poster'}
+          </button>
+          {searchMsg && <p className="hint">{searchMsg}</p>}
+        </div>
+
+        {found && found.length > 0 && (
+          <div className="poster-results">
+            {found.map((r) => (
+              <button type="button" className="poster-pick" key={`${r.title}-${r.year}`} onClick={() => pickResult(r)}>
+                <img src={r.poster} alt={r.title} />
+                {r.title} ({r.year})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {form.posterUrl && (
+          <div className="poster-chosen">
+            <img src={form.posterUrl} alt="Chosen poster" />
+            <span>Poster selected</span>
+            <button type="button" className="btn ghost small" onClick={() => setForm({ ...form, posterUrl: '' })}>
+              Remove
+            </button>
+          </div>
+        )}
 
         <div className="row">
           <label>
